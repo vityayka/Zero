@@ -2,46 +2,43 @@ package main
 
 import (
 	"fmt"
-	"html/template"
-	"log"
 	"net/http"
 	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/vityayka/go-zero/views"
 )
 
-func execTpl(w http.ResponseWriter, tpl string) bool {
-	w.Header().Set("content-type", "text/html")
-	t, err := template.ParseFiles(tpl)
+func execTpl(w http.ResponseWriter, path string, data any) bool {
+	tpl, err := views.Parse(path)
 	if err != nil {
-		log.Printf("error parsing template %v", err)
 		http.Error(w, "error parsing template", http.StatusInternalServerError)
-		return true
 	}
-	err = t.Execute(w, nil)
-	if err != nil {
-		log.Printf("error executing template %v", err)
-		http.Error(w, "error executing template", http.StatusInternalServerError)
-		return true
-	}
-	return false
+	return tpl.Execute(w, nil)
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
-	execTpl(w, filepath.Join("templates", "hello.gohtml"))
+	execTpl(w, filepath.Join("templates", "hello.gohtml"), nil)
 }
 
 func handlerDash(w http.ResponseWriter, r *http.Request) {
-	execTpl(w, filepath.Join("templates", "dashboard.gohtml"))
+	execTpl(w, filepath.Join("templates", "dashboard.gohtml"), nil)
 }
 
 func handleCustom(w http.ResponseWriter, r *http.Request) {
-	execTpl(w, filepath.Join("templates", "custom.gohtml"))
+	execTpl(w, filepath.Join("templates", "custom.gohtml"), nil)
 }
 
 func main() {
+	// azaz := []struct {
+	// 	X string
+	// 	Y int
+	// }{{"azaz", 1}, {"fdfdf", 2}}
+
+	// fmt.Printf("Azaz: %+v", azaz)
+
 	router := chi.NewRouter()
 	// router.Use(middleware.Logger)
 	router.Get("/", handleRoot)
