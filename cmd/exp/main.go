@@ -20,6 +20,9 @@ func main() {
 		return
 	}
 
+	// reader := strings.NewReader("asdfasdfasdf")
+	// reader.
+
 	type Occupation struct {
 		Salary   int32
 		Position string
@@ -28,8 +31,8 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := struct {
-			Name       string
-			Occupation Occupation
+			Name string
+			Occupation
 		}{
 			Name: "Ivan",
 			Occupation: Occupation{

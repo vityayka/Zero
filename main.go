@@ -3,12 +3,12 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/vityayka/go-zero/controllers"
+	"github.com/vityayka/go-zero/templates"
 	"github.com/vityayka/go-zero/views"
 )
 
@@ -23,14 +23,14 @@ func main() {
 	router := chi.NewRouter()
 	// router.Use(middleware.Logger)
 
-	router.Get("/", controllers.StaticHandler(views.Must(views.Parse(filepath.Join("templates", "hello.gohtml")))))
+	router.Get("/", controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "hello.gohtml"))))
 	router.Get("/dashboard",
-		controllers.StaticHandler(views.Must(views.Parse(filepath.Join("templates", "dashboard.gohtml")))))
+		controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "dashboard.gohtml"))))
 
 	router.Route("/photos", func(r chi.Router) {
 		r.Use(middleware.Logger)
 		r.Get("/{photoSlug:[a-zA-z-0-9]+}",
-			controllers.StaticHandler(views.Must(views.Parse(filepath.Join("templates", "custom.gohtml")))))
+			controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "custom.gohtml"))))
 	})
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "PAGE NOT FOUND", http.StatusNotFound)
