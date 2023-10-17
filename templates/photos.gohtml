@@ -1,0 +1,9 @@
+{{template "header"}}
+<h1>Custom page</h1>
+
+{{range .}}
+<img src="{{.Path}}" title="{{.Title}}">
+{{end}}
+
+{{/* <pre>{{.}}</pre> */}}
+{{template "footer"}}
