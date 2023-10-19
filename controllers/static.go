@@ -2,17 +2,15 @@ package controllers
 
 import (
 	"net/http"
-
-	"github.com/vityayka/go-zero/views"
 )
 
-func StaticHandler(tpl views.Template) http.HandlerFunc {
+func StaticHandler(tpl Template) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tpl.Execute(w, nil)
 	}
 }
 
-func Photos(tpl views.Template) http.HandlerFunc {
+func Photos(tpl Template) http.HandlerFunc {
 
 	questions := []struct {
 		Path  string

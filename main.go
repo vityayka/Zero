@@ -19,6 +19,11 @@ func main() {
 	router.Get("/dashboard",
 		controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "dashboard.gohtml", "tailwind.gohtml"))))
 
+	usersC := controllers.Users{}
+	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
+
+	router.Get("/signup", usersC.New)
+
 	router.Route("/photos", func(r chi.Router) {
 		r.Use(middleware.Logger)
 		r.Get("/{photoSlug:[a-zA-z-0-9]+}",
