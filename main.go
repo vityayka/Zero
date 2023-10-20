@@ -23,6 +23,7 @@ func main() {
 	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 
 	router.Get("/signup", usersC.New)
+	router.Post("/users/new", usersC.Create)
 
 	router.Route("/photos", func(r chi.Router) {
 		r.Use(middleware.Logger)
