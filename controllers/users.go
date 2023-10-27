@@ -20,8 +20,11 @@ func (u Users) New(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u Users) Create(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	email := r.PostForm.Get("email")
-	password := r.PostForm.Get("password")
-	fmt.Printf("email: %v pass: %v\n", email, password)
+	// email := r.PostForm.Get("email")
+	// password := r.PostForm.Get("password")
+	file, fileHeader, err := r.FormFile("photo")
+	fileInfo := []any{fileHeader.Filename, fileHeader.Size}
+	fmt.Printf("file: %+v\n", file)
+	fmt.Printf("info: %+v\n", fileInfo)
+	fmt.Printf("err: %+v\n", err)
 }
