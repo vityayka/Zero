@@ -6,7 +6,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/vityayka/go-zero/controllers"
+	"github.com/vityayka/go-zero/models"
 	"github.com/vityayka/go-zero/templates"
 	"github.com/vityayka/go-zero/views"
 )
@@ -19,11 +21,24 @@ func main() {
 	router.Get("/dashboard",
 		controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "dashboard.gohtml", "tailwind.gohtml"))))
 
-	usersC := controllers.Users{}
+	db, err := models.Open(models.DefaultPgConfig())
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	UserService := models.UserService{
+		DB: db,
+	}
+	usersC := controllers.Users{
+		UserService: &UserService,
+	}
 	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
+	usersC.Templates.Signin = views.Must(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
 
 	router.Get("/signup", usersC.New)
+	router.Get("/users/signin", usersC.Signin)
 	router.Post("/users/new", usersC.Create)
+	router.Post("/users/auth", usersC.Auth)
 
 	router.Route("/photos", func(r chi.Router) {
 		r.Use(middleware.Logger)
