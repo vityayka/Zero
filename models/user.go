@@ -46,12 +46,18 @@ func (us *UserService) Auth(email, password string) (*User, error) {
 		Email: strings.ToLower(email),
 	}
 
-	row := us.DB.QueryRow("SELECT id, pw_hash FROM users where email = $1", email)
+	row := us.DB.QueryRow("SELECT id, pw_hash FROM users where email = $1;", email)
 	err := row.Scan(&user.ID, &user.PwHash)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("User not found")
 	}
+
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong: %v", err)
+	}
+
+	fmt.Printf("User: %v", user)
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(password))
 

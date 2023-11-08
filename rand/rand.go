@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 )
 
-const sessionTokenSize = 32
-
 func bytes(size int) ([]byte, error) {
 	bytes := make([]byte, size)
 	_, err := rand.Read(bytes)
@@ -22,12 +20,4 @@ func String(size int) (string, error) {
 		return "", err
 	}
 	return base64.URLEncoding.EncodeToString(randBytes), nil
-}
-
-func SessionToken() (string, error) {
-	return String(sessionTokenSize)
-}
-
-func IsSessionToken(input string) bool {
-	return len(input) == sessionTokenSize
 }
