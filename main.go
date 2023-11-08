@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/gorilla/csrf"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/vityayka/go-zero/controllers"
 	"github.com/vityayka/go-zero/models"
@@ -29,13 +30,18 @@ func main() {
 	UserService := models.UserService{
 		DB: db,
 	}
+	SessionService := models.SessionService{
+		DB: db,
+	}
 	usersC := controllers.Users{
-		UserService: &UserService,
+		UserService:    &UserService,
+		SessionService: &SessionService,
 	}
 	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 	usersC.Templates.Signin = views.Must(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
 
-	router.Get("/signup", usersC.New)
+	router.Get("/users/signup", usersC.New)
+	// router.Get("/users/signin", TimeMiddleware(usersC.Signin))
 	router.Get("/users/signin", usersC.Signin)
 	router.Post("/users/new", usersC.Create)
 	router.Post("/users/auth", usersC.Auth)
@@ -48,7 +54,20 @@ func main() {
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "PAGE NOT FOUND", http.StatusNotFound)
 	})
-	// time.Sleep(1 * time.Second)
 	fmt.Println("Starting the server on :3000...")
-	http.ListenAndServe(":3000", router)
+	csrfKey := "sf9gia0sdcvif04FF349fadvununaEEE"
+	csrfMiddleware := csrf.Protect(
+		[]byte(csrfKey),
+		csrf.Secure(false), // TODO: move it to .env or an analog
+		csrf.Path("/"),
+	)
+	http.ListenAndServe(":3000", csrfMiddleware(router))
 }
+
+// func TimeMiddleware(h http.HandlerFunc) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		start := time.Now()
+// 		h(w, r)
+// 		fmt.Fprintf(w, "Request time = %s", time.Since(start).String())
+// 	}
+// }

@@ -1,11 +1,14 @@
 package views
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/csrf"
 )
 
 func Must(tpl Template, err error) Template {
@@ -16,7 +19,17 @@ func Must(tpl Template, err error) Template {
 }
 
 func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
-	tpl, err := template.ParseFS(fs, patterns...)
+	tpl := template.New(patterns[0])
+
+	tpl.Funcs(
+		template.FuncMap{
+			"csrfField": func() (template.HTML, error) {
+				return "", fmt.Errorf("csrfField has never been implemented :(")
+			},
+		},
+	)
+
+	tpl, err := tpl.ParseFS(fs, patterns...)
 
 	// var ErrorNotFound = errors.New("not found")
 	// log.Println(errors.Is(ErrorNotFound, ErrorNotFound))
@@ -25,20 +38,40 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 		log.Printf("error parsing template %v", err)
 		return Template{}, fmt.Errorf("error parsing template %v", err)
 	}
-	return Template{tpl}, nil
+	return Template{HTMLTpl: tpl}, nil
 }
 
 type Template struct {
 	HTMLTpl *template.Template
 }
 
-func (t Template) Execute(w http.ResponseWriter, data interface{}) bool {
+func (t Template) Execute(w http.ResponseWriter, r *http.Request, data interface{}) bool {
 	// log.Println("hey june")
-	err := t.HTMLTpl.Execute(w, data)
+	tpl, err := t.HTMLTpl.Clone()
+	if err != nil {
+		log.Printf("cloning template failed: %v", err)
+		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	}
+	tpl.Funcs(
+		template.FuncMap{
+			"csrfField": func() template.HTML {
+				return csrf.TemplateField(r)
+			},
+		},
+	)
+
+	var buf bytes.Buffer
+
+	err = tpl.Execute(&buf, data)
 	if err != nil {
 		log.Printf("error executing template %v", err)
 		http.Error(w, "error executing template", http.StatusInternalServerError)
 		return true
 	}
+
+	buf.WriteTo(w)
+	buf.Reset()
+	// makes
+
 	return false
 }

@@ -12,7 +12,8 @@ type Users struct {
 		New    Template
 		Signin Template
 	}
-	UserService *models.UserService
+	UserService    *models.UserService
+	SessionService *models.SessionService
 }
 
 func (u Users) New(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +21,7 @@ func (u Users) New(w http.ResponseWriter, r *http.Request) {
 		Email string
 	}
 	data.Email = r.FormValue("email")
-	u.Templates.New.Execute(w, data)
+	u.Templates.New.Execute(w, r, data)
 }
 
 func (u Users) Signin(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +31,9 @@ func (u Users) Signin(w http.ResponseWriter, r *http.Request) {
 	}
 	data.Email = r.FormValue("email")
 	data.Password = r.FormValue("password")
-	u.Templates.Signin.Execute(w, data)
+	// cookie, _ := r.Cookie("email")
+	// fmt.Fprintf(w, "cookie: %v", cookie.Value)
+	u.Templates.Signin.Execute(w, r, data)
 }
 
 func (u Users) Create(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +46,8 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+
+	u.createSession(w, user)
 
 	fmt.Fprintf(w, "Created user: %v", user)
 }
@@ -58,5 +63,23 @@ func (u Users) Auth(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Error: %v", err)
 	}
 
+	u.createSession(w, user)
+
 	fmt.Fprintf(w, "Authenticated user: %v", user)
+}
+
+func (u Users) createSession(w http.ResponseWriter, user *models.User) {
+	session, err := u.SessionService.Create(user.ID)
+
+	if err != nil {
+		panic(err)
+	}
+
+	cookie := http.Cookie{
+		Name:  "session_token",
+		Value: session.Token,
+		Path:  "/",
+	}
+
+	http.SetCookie(w, &cookie)
 }
