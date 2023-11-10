@@ -27,15 +27,9 @@ func main() {
 		panic(err)
 	}
 	defer db.Close()
-	UserService := models.UserService{
-		DB: db,
-	}
-	SessionService := models.SessionService{
-		DB: db,
-	}
 	usersC := controllers.Users{
-		UserService:    &UserService,
-		SessionService: &SessionService,
+		UserService:    &models.UserService{DB: db},
+		SessionService: &models.SessionService{DB: db},
 	}
 	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 	usersC.Templates.Signin = views.Must(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
@@ -45,6 +39,8 @@ func main() {
 	router.Get("/users/signin", usersC.Signin)
 	router.Post("/users/new", usersC.Create)
 	router.Post("/users/auth", usersC.Auth)
+	router.Post("/users/signout", usersC.SignOut)
+	router.Get("/users/me", usersC.CurrentUser)
 
 	router.Route("/photos", func(r chi.Router) {
 		r.Use(middleware.Logger)

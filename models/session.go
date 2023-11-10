@@ -56,11 +56,10 @@ func (service *SessionService) Create(userId int) (*Session, error) {
 func (service *SessionService) User(token string) (*User, error) {
 	tokenHash := service.generateTokenHash(token)
 
-	fmt.Printf("hash: %x", tokenHash)
-
+	service.DB.Stats()
 	res := service.DB.QueryRow(`
 		SELECT u.id user_id, u.email, u.pw_hash FROM sessions s
-		LEFT JOIN users u on s.user_ud = u.id
+		LEFT JOIN users u on s.user_id = u.id
 		WHERE s.token_hash = $1`,
 		tokenHash,
 	)
@@ -73,9 +72,15 @@ func (service *SessionService) User(token string) (*User, error) {
 		return nil, fmt.Errorf("provided session token is expired or a fake")
 	}
 
-	fmt.Printf("selected user: %v", user)
-
 	return &user, nil
+}
+
+func (service *SessionService) Delete(token string) error {
+	hash := service.generateTokenHash(token)
+
+	_, err := service.DB.Exec("DELETE FROM sessions WHERE token_hash = $1", hash)
+
+	return err
 }
 
 func (service *SessionService) SessionToken() (string, error) {

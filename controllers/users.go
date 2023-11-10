@@ -27,11 +27,18 @@ func (u Users) New(w http.ResponseWriter, r *http.Request) {
 func (u Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
 	sessionTokenCookie, err := r.Cookie(CookieSession)
 
-	if err == http.ErrNoCookie {
+	if err != nil {
 		http.Redirect(w, r, "/users/signin", http.StatusFound)
+		return
 	}
 
-	fmt.Fprintf(w, "session: %v", sessionTokenCookie.Value)
+	user, err := u.SessionService.User(sessionTokenCookie.Value)
+	if err != nil {
+		fmt.Fprintf(w, "something went wrong: %v", err)
+		return
+
+	}
+	fmt.Fprintf(w, "user: %v", user)
 }
 
 func (u Users) Signin(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +83,27 @@ func (u Users) Auth(w http.ResponseWriter, r *http.Request) {
 	u.createSession(w, user)
 
 	http.Redirect(w, r, "/users/me", http.StatusFound)
+}
+
+func (u Users) SignOut(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(CookieSession)
+
+	if err != nil {
+		fmt.Fprintf(w, "Error: %v", err)
+		fmt.Printf("Error: %v", err)
+		return
+	}
+
+	err = u.SessionService.Delete(cookie.Value)
+	if err != nil {
+		http.Error(w, "Smthng went wrong", http.StatusInternalServerError)
+		fmt.Errorf("deleting session: %v", err)
+		return
+	}
+
+	deleteCookie(w, CookieSession)
+
+	http.Redirect(w, r, "/users/signin", http.StatusFound)
 }
 
 func (u Users) createSession(w http.ResponseWriter, user *models.User) {
