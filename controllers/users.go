@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/vityayka/go-zero/context"
 	"github.com/vityayka/go-zero/models"
 )
 
@@ -25,23 +26,13 @@ func (u Users) New(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
-	sessionTokenCookie, err := r.Cookie(CookieSession)
+	user := context.User(r.Context())
 
-	if err != nil {
-		http.Redirect(w, r, "/users/signin", http.StatusFound)
-		return
-	}
-
-	user, err := u.SessionService.User(sessionTokenCookie.Value)
-	if err != nil {
-		fmt.Fprintf(w, "something went wrong: %v", err)
-		return
-
-	}
 	fmt.Fprintf(w, "user: %v", user)
 }
 
 func (u Users) Signin(w http.ResponseWriter, r *http.Request) {
+	r.Context()
 	var data struct {
 		Email    string
 		Password string
