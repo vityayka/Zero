@@ -25,14 +25,17 @@
         </a>
       </div>
       <div class="space-x-4">
+      {{if currentUser}}
         <form action="/users/signout" method="post" class="inline px-4">
           {{csrfField}}
           <button>Sign out</button>
         </form>
+        {{else}}
         <a href="/users/signin">Sign in</a>
         <a href="/users/signup" class="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded">
           Sign up
         </a>
+        {{end}}
       </div>
     </nav>
   </header>

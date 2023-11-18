@@ -2,7 +2,10 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/vityayka/go-zero/context"
 	"github.com/vityayka/go-zero/models"
@@ -10,11 +13,15 @@ import (
 
 type Users struct {
 	Templates struct {
-		New    Template
-		Signin Template
+		New            Template
+		ForgotPassword Template
+		NewPassword    Template
+		Signin         Template
 	}
-	UserService    *models.UserService
-	SessionService *models.SessionService
+	UserService       *models.UserService
+	SessionService    *models.SessionService
+	ResetTokenService *models.ResetTokenService
+	EmailService      *models.EmailService
 }
 
 func (u Users) New(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +39,6 @@ func (u Users) CurrentUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (u Users) Signin(w http.ResponseWriter, r *http.Request) {
-	r.Context()
 	var data struct {
 		Email    string
 		Password string
@@ -55,6 +61,70 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 
 	u.createSession(w, user)
 
+	http.Redirect(w, r, "/users/me", http.StatusFound)
+}
+
+func (u Users) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Email string
+	}
+	data.Email = r.FormValue("email")
+	u.Templates.ForgotPassword.Execute(w, r, data)
+}
+
+func (u Users) ProcessForgotPassword(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	email := r.PostForm.Get("email")
+
+	token, err := u.ResetTokenService.Create(email)
+
+	if err != nil {
+		http.Error(w, "Something went wrong :(", http.StatusInternalServerError)
+		return
+	}
+
+	user, err := u.ResetTokenService.User(token.Token)
+
+	if err != nil {
+		http.Error(w, "No such user :(", http.StatusNotFound)
+		return
+	}
+
+	url := url.Values{
+		"token": {token.Token},
+	}
+
+	u.EmailService.ForgotPassword(user.Email, "http://localhost:3000/users/reset-password?"+url.Encode())
+
+	fmt.Fprintf(w, "Go to your email inbox")
+}
+
+func (u Users) ConsumeResetToken(w http.ResponseWriter, r *http.Request) {
+	token := r.FormValue("token")
+	user, err := u.ResetTokenService.Consume(token)
+	if err != nil {
+		http.Error(w, "provided token is bad", http.StatusUnauthorized)
+	}
+
+	var data struct {
+		User *models.User
+	}
+
+	data.User = user
+
+	u.Templates.NewPassword.Execute(w, r, data)
+}
+
+func (u Users) ProcessNewPassword(w http.ResponseWriter, r *http.Request) {
+	userID, _ := strconv.Atoi(r.FormValue("user_id"))
+	password := r.FormValue("password")
+	passwordRepeat := r.FormValue("password_repeat")
+
+	if password != passwordRepeat {
+		http.Error(w, "Passwords don't match", http.StatusBadRequest)
+	}
+
+	u.UserService.UpdatePassword(userID, password)
 	http.Redirect(w, r, "/users/me", http.StatusFound)
 }
 
@@ -88,7 +158,7 @@ func (u Users) SignOut(w http.ResponseWriter, r *http.Request) {
 	err = u.SessionService.Delete(cookie.Value)
 	if err != nil {
 		http.Error(w, "Smthng went wrong", http.StatusInternalServerError)
-		fmt.Errorf("deleting session: %v", err)
+		log.Fatalf("deleting session: %v", err)
 		return
 	}
 

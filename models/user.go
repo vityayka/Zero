@@ -41,6 +41,17 @@ func (us *UserService) Create(email, password string) (*User, error) {
 	return &user, nil
 }
 
+func (us *UserService) UpdatePassword(UserID int, password string) error {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("pw hash generating error: %w", err)
+	}
+
+	us.DB.QueryRow("UPDATE users SET pw_hash = $1 WHERE user_id = $2", string(hash), UserID)
+
+	return nil
+}
+
 func (us *UserService) Auth(email, password string) (*User, error) {
 	user := User{
 		Email: strings.ToLower(email),

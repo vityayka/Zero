@@ -5,7 +5,7 @@
       Start sharing your photos today!
     </h1>
     <form action="/users/new" method="post">
-              {{csrfField}}
+      {{csrfField}}
       <div class="py-2">
         <label for="email" class="text-sm font-semibold text-gray-800">
           Email Address
@@ -45,10 +45,10 @@
       <div class="py-2 w-full flex justify-between">
         <p class="text-xs text-gray-500">
           Already have an account?
-          <a href="/signin" class="underline">Sign in</a>
+          <a href="/users/signin" class="underline">Sign in</a>
         </p>
         <p class="text-xs text-gray-500">
-          <a href="/reset-pw" class="underline">Forgot your password?</a>
+          <a href="/users/forgot-password" class="underline">Forgot your password?</a>
         </p>
       </div>
     </form>

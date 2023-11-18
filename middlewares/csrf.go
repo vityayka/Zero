@@ -6,12 +6,15 @@ import (
 	"github.com/gorilla/csrf"
 )
 
-const csrfKey string = "sf9gia0sdcvif04FF349fadvununaEEE"
+type CSRFConfig struct {
+	Key    string
+	Secure bool
+}
 
-func Protect() func(http.Handler) http.Handler {
+func CSRFProtect(cfg CSRFConfig) func(http.Handler) http.Handler {
 	return csrf.Protect(
-		[]byte(csrfKey),
-		csrf.Secure(false), // TODO: move it to .env or an analog
+		[]byte(cfg.Key),
+		csrf.Secure(cfg.Secure),
 		csrf.Path("/"),
 	)
 }
