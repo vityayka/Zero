@@ -29,7 +29,6 @@ func (service *SessionService) Create(userId int) (*Session, error) {
 	token, err := service.SessionToken()
 	if err != nil {
 		return nil, err
-
 	}
 
 	session := Session{

@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -47,12 +48,27 @@ func (us *UserService) UpdatePassword(UserID int, password string) error {
 		return fmt.Errorf("pw hash generating error: %w", err)
 	}
 
-	us.DB.QueryRow("UPDATE users SET pw_hash = $1 WHERE user_id = $2", string(hash), UserID)
+	us.DB.QueryRow("UPDATE users SET pw_hash = $1 WHERE id = $2", string(hash), UserID)
 
 	return nil
 }
 
 func (us *UserService) Auth(email, password string) (*User, error) {
+	user, err := us.Find(email)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(password))
+
+	if err == bcrypt.ErrMismatchedHashAndPassword {
+		return nil, fmt.Errorf("password is incorrect")
+	}
+
+	return user, nil
+}
+
+func (us *UserService) Find(email string) (*User, error) {
 	user := User{
 		Email: strings.ToLower(email),
 	}
@@ -65,15 +81,8 @@ func (us *UserService) Auth(email, password string) (*User, error) {
 	}
 
 	if err != nil {
+		log.Printf("err: %v", err)
 		return nil, fmt.Errorf("something went wrong: %v", err)
-	}
-
-	fmt.Printf("User: %v", user)
-
-	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(password))
-
-	if err == bcrypt.ErrMismatchedHashAndPassword {
-		return nil, fmt.Errorf("password is incorrect")
 	}
 
 	return &user, nil

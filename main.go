@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -93,7 +94,7 @@ func setupRoutes(usersC controllers.Users, db *sql.DB, cfg config) *chi.Mux {
 	router.Post("/users/signout", usersC.SignOut)
 	router.Get("/users/forgot-password", usersC.ForgotPassword)
 	router.Post("/users/forgot-password", usersC.ProcessForgotPassword)
-	router.Get("/users/reset-password", usersC.ConsumeResetToken)
+	router.Get("/users/reset-password", usersC.NewPassword)
 	router.Post("/users/new-password", usersC.ProcessNewPassword)
 	router.Route("/users/me", func(r chi.Router) {
 		r.Use(userMiddleware.RequireUser)
@@ -112,16 +113,18 @@ func setupRoutes(usersC controllers.Users, db *sql.DB, cfg config) *chi.Mux {
 }
 
 func initControllers(db *sql.DB, cfg config) controllers.Users {
+	userService := &models.UserService{DB: db}
 	usersC := controllers.Users{
-		UserService:       &models.UserService{DB: db},
+		UserService:       userService,
 		SessionService:    &models.SessionService{DB: db},
-		ResetTokenService: &models.ResetTokenService{DB: db},
+		ResetTokenService: &models.PasswordResetService{DB: db, UserService: userService, Duration: time.Hour},
 		EmailService:      models.NewEmailService(cfg.SMTP),
 	}
 
 	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 	usersC.Templates.Signin = views.Must(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
 	usersC.Templates.ForgotPassword = views.Must(views.ParseFS(templates.FS, "forgot_password.gohtml", "tailwind.gohtml"))
+	usersC.Templates.NewPassword = views.Must(views.ParseFS(templates.FS, "new_password.gohtml", "tailwind.gohtml"))
 	return usersC
 }
 

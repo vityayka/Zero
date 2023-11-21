@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"strconv"
 
 	"github.com/vityayka/go-zero/context"
 	"github.com/vityayka/go-zero/models"
@@ -20,7 +19,7 @@ type Users struct {
 	}
 	UserService       *models.UserService
 	SessionService    *models.SessionService
-	ResetTokenService *models.ResetTokenService
+	ResetTokenService *models.PasswordResetService
 	EmailService      *models.EmailService
 }
 
@@ -79,6 +78,7 @@ func (u Users) ProcessForgotPassword(w http.ResponseWriter, r *http.Request) {
 	token, err := u.ResetTokenService.Create(email)
 
 	if err != nil {
+		fmt.Printf("err: %v", err)
 		http.Error(w, "Something went wrong :(", http.StatusInternalServerError)
 		return
 	}
@@ -99,24 +99,25 @@ func (u Users) ProcessForgotPassword(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Go to your email inbox")
 }
 
-func (u Users) ConsumeResetToken(w http.ResponseWriter, r *http.Request) {
+func (u Users) NewPassword(w http.ResponseWriter, r *http.Request) {
 	token := r.FormValue("token")
-	user, err := u.ResetTokenService.Consume(token)
+	_, err := u.ResetTokenService.User(token)
 	if err != nil {
 		http.Error(w, "provided token is bad", http.StatusUnauthorized)
+		return
 	}
 
 	var data struct {
-		User *models.User
+		Token string
 	}
 
-	data.User = user
+	data.Token = token
 
 	u.Templates.NewPassword.Execute(w, r, data)
 }
 
 func (u Users) ProcessNewPassword(w http.ResponseWriter, r *http.Request) {
-	userID, _ := strconv.Atoi(r.FormValue("user_id"))
+	token := r.FormValue("token")
 	password := r.FormValue("password")
 	passwordRepeat := r.FormValue("password_repeat")
 
@@ -124,7 +125,18 @@ func (u Users) ProcessNewPassword(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Passwords don't match", http.StatusBadRequest)
 	}
 
-	u.UserService.UpdatePassword(userID, password)
+	user, err := u.ResetTokenService.User(token)
+
+	if err != nil {
+		fmt.Fprintf(w, "Error: %v", err)
+		fmt.Printf("Error: %v", err)
+		return
+	}
+
+	u.UserService.UpdatePassword(user.ID, password)
+
+	u.createSession(w, user)
+	u.ResetTokenService.Consume(models.ResetToken{Token: token})
 	http.Redirect(w, r, "/users/me", http.StatusFound)
 }
 
