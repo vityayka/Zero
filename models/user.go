@@ -2,11 +2,18 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	ErrEmailExists error = errors.New("models: users with such email already exists")
 )
 
 type User struct {
@@ -36,6 +43,10 @@ func (us *UserService) Create(email, password string) (*User, error) {
 
 	err = res.Scan(&user.ID)
 	if err != nil {
+		var pgerror *pgconn.PgError
+		if errors.As(err, &pgerror) && pgerror.Code == pgerrcode.UniqueViolation {
+			return nil, ErrEmailExists
+		}
 		return nil, fmt.Errorf("inserting user error: %w", err)
 	}
 
@@ -48,7 +59,7 @@ func (us *UserService) UpdatePassword(UserID int, password string) error {
 		return fmt.Errorf("pw hash generating error: %w", err)
 	}
 
-	us.DB.QueryRow("UPDATE users SET pw_hash = $1 WHERE id = $2", string(hash), UserID)
+	us.DB.QueryRow("UPDATE users SET pw_hash = $1 WHERE _id = $2", string(hash), UserID)
 
 	return nil
 }

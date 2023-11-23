@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/vityayka/go-zero/context"
+	"github.com/vityayka/go-zero/errors"
 	"github.com/vityayka/go-zero/models"
 )
 
@@ -51,11 +52,22 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	email := r.PostForm.Get("email")
 	password := r.PostForm.Get("password")
+	var data struct {
+		Email    string
+		Password string
+	}
+
+	data.Email = email
+	data.Password = password
 
 	user, err := u.UserService.Create(email, password)
 
 	if err != nil {
-		panic(err)
+		if errors.Is(err, models.ErrEmailExists) {
+			err = errors.Public(err, "This email is already registered")
+		}
+		u.Templates.New.Execute(w, r, data, err)
+		return
 	}
 
 	u.createSession(w, user)
