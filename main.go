@@ -66,15 +66,14 @@ func main() {
 	}
 	db := setupDB(cfg.Postgres)
 	defer db.Close()
-	usersC := initControllers(db, cfg)
 
-	router := setupRoutes(usersC, db, cfg)
+	router := setupRoutes(db, cfg)
 
 	fmt.Printf("Starting the server on %s...", cfg.Server.Address)
 	http.ListenAndServe(cfg.Server.Address, router)
 }
 
-func setupRoutes(usersC controllers.Users, db *sql.DB, cfg config) *chi.Mux {
+func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 	router := chi.NewRouter()
 
 	userMiddleware := middlewares.UserMiddleware{
@@ -86,6 +85,10 @@ func setupRoutes(usersC controllers.Users, db *sql.DB, cfg config) *chi.Mux {
 	router.Get("/", controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "hello.gohtml", "tailwind.gohtml"))))
 	router.Get("/dashboard",
 		controllers.StaticHandler(views.Must(views.ParseFS(templates.FS, "dashboard.gohtml", "tailwind.gohtml"))))
+
+	usersC := &controllers.Users{}
+	galleryC := &controllers.Galleries{}
+	initControllers(usersC, galleryC, db, cfg)
 
 	router.Get("/users/signup", usersC.New)
 	router.Get("/users/signin", usersC.Signin)
@@ -100,6 +103,15 @@ func setupRoutes(usersC controllers.Users, db *sql.DB, cfg config) *chi.Mux {
 		r.Use(userMiddleware.RequireUser)
 		r.Get("/", usersC.CurrentUser)
 	})
+	router.Route("/galleries", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(userMiddleware.RequireUser)
+			r.Get("/new", galleryC.New)
+			r.Get("/{id:[0-9]+}/edit", galleryC.Edit)
+			r.Post("/{id:[0-9]+}/edit", galleryC.Update)
+			r.Post("/", galleryC.Create)
+		})
+	})
 
 	router.Route("/photos", func(r chi.Router) {
 		r.Use(middleware.Logger)
@@ -112,20 +124,22 @@ func setupRoutes(usersC controllers.Users, db *sql.DB, cfg config) *chi.Mux {
 	return router
 }
 
-func initControllers(db *sql.DB, cfg config) controllers.Users {
+func initControllers(usersC *controllers.Users, galleryC *controllers.Galleries, db *sql.DB, cfg config) {
 	userService := &models.UserService{DB: db}
-	usersC := controllers.Users{
-		UserService:       userService,
-		SessionService:    &models.SessionService{DB: db},
-		ResetTokenService: &models.PasswordResetService{DB: db, UserService: userService, Duration: time.Hour},
-		EmailService:      models.NewEmailService(cfg.SMTP),
-	}
+	usersC.UserService = userService
+	usersC.SessionService = &models.SessionService{DB: db}
+	usersC.ResetTokenService = &models.PasswordResetService{DB: db, UserService: userService, Duration: time.Hour}
+	usersC.EmailService = models.NewEmailService(cfg.SMTP)
 
 	usersC.Templates.New = views.Must(views.ParseFS(templates.FS, "signup.gohtml", "tailwind.gohtml"))
 	usersC.Templates.Signin = views.Must(views.ParseFS(templates.FS, "signin.gohtml", "tailwind.gohtml"))
 	usersC.Templates.ForgotPassword = views.Must(views.ParseFS(templates.FS, "forgot_password.gohtml", "tailwind.gohtml"))
 	usersC.Templates.NewPassword = views.Must(views.ParseFS(templates.FS, "new_password.gohtml", "tailwind.gohtml"))
-	return usersC
+
+	galleryC.Service = &models.GalleryService{DB: db}
+
+	galleryC.Templates.New = views.Must(views.ParseFS(templates.FS, "galleries/new.gohtml", "tailwind.gohtml"))
+	galleryC.Templates.Edit = views.Must(views.ParseFS(templates.FS, "galleries/edit.gohtml", "tailwind.gohtml"))
 }
 
 func setupDB(cfg models.PostgresConfig) *sql.DB {

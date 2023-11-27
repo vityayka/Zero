@@ -12,10 +12,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	ErrEmailExists error = errors.New("models: users with such email already exists")
-)
-
 type User struct {
 	ID     int
 	Email  string
