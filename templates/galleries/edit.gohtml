@@ -1,4 +1,4 @@
-{{template "header"}}
+{{template "header" .}}
 <div class="w-full p-8">
 <h1>Create a new gallery</h1>
     <form action="/galleries/{{.ID}}/edit" method="post">
@@ -25,5 +25,13 @@
         </button>
       </div>
     </form>
+        <form action="/galleries/{{.ID}}/delete" method="POST" onsubmit="return confirm('Are you sure you wanna delete the gallery?')">
+          {{csrfField}}
+          <div class="py-4">
+            <button class="py-4 px-2 bg-red-600 hover:bg-indigo-700 text-white rounded font-bold text-lg">
+              Delete
+            </button>
+          </div>
+      </form>
   </div>
-{{template "footer"}}
+{{template "footer" .}}

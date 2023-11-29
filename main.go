@@ -104,12 +104,14 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 		r.Get("/", usersC.CurrentUser)
 	})
 	router.Route("/galleries", func(r chi.Router) {
+		r.Get("/{id:[0-9]+}", galleryC.Show)
 		r.Group(func(r chi.Router) {
 			r.Use(userMiddleware.RequireUser)
 			r.Get("/new", galleryC.New)
 			r.Get("/{id:[0-9]+}/edit", galleryC.Edit)
 			r.Post("/{id:[0-9]+}/edit", galleryC.Update)
-			r.Post("/", galleryC.Create)
+			r.Post("/{id:[0-9]+}/delete", galleryC.Delete)
+			r.Get("/", galleryC.Index)
 		})
 	})
 
@@ -139,7 +141,9 @@ func initControllers(usersC *controllers.Users, galleryC *controllers.Galleries,
 	galleryC.Service = &models.GalleryService{DB: db}
 
 	galleryC.Templates.New = views.Must(views.ParseFS(templates.FS, "galleries/new.gohtml", "tailwind.gohtml"))
+	galleryC.Templates.Show = views.Must(views.ParseFS(templates.FS, "galleries/show.gohtml", "tailwind.gohtml"))
 	galleryC.Templates.Edit = views.Must(views.ParseFS(templates.FS, "galleries/edit.gohtml", "tailwind.gohtml"))
+	galleryC.Templates.Index = views.Must(views.ParseFS(templates.FS, "galleries/index.gohtml", "tailwind.gohtml"))
 }
 
 func setupDB(cfg models.PostgresConfig) *sql.DB {
