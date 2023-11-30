@@ -59,7 +59,6 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 
 	gallery, err := g.galleryById(r, w)
 	if err != nil {
-		http.Error(w, err.Error(), models.HttpErrorCode(err))
 		return
 	}
 
@@ -105,9 +104,8 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryById(r, w)
+	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
 	if err != nil {
-		http.Error(w, err.Error(), models.HttpErrorCode(err))
 		return
 	}
 
@@ -115,11 +113,11 @@ func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryById(r, w)
+	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
 	if err != nil {
-		http.Error(w, err.Error(), models.HttpErrorCode(err))
 		return
 	}
+
 	gallery.Title = r.FormValue("title")
 
 	err = g.Service.Update(gallery)
@@ -135,9 +133,8 @@ func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
-	gallery, err := g.galleryById(r, w)
+	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
 	if err != nil {
-		http.Error(w, err.Error(), models.HttpErrorCode(err))
 		return
 	}
 
@@ -151,20 +148,36 @@ func (g Galleries) Delete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
-func (g Galleries) galleryById(r *http.Request, w http.ResponseWriter) (*models.Gallery, error) {
+type galleryCriteria func(w http.ResponseWriter, r *http.Request, gallery *models.Gallery) error
+
+func (g Galleries) galleryById(r *http.Request, w http.ResponseWriter, opts ...galleryCriteria) (*models.Gallery, error) {
 	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		return nil, models.ErrBadRequest
+		http.Error(w, "Provided id is invalid", http.StatusBadRequest)
+		return nil, err
 	}
 
 	gallery, err := g.Service.ById(id)
 	if err != nil {
-		return nil, models.ErrNotFound
+		http.Error(w, "Gallery is not found", http.StatusNotFound)
+		return nil, err
 	}
 
+	for _, opt := range opts {
+		err = opt(w, r, gallery)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return gallery, nil
+}
+
+func galleryBelongsToUser(w http.ResponseWriter, r *http.Request, gallery *models.Gallery) error {
 	user := context.User(r.Context())
 	if user.ID != gallery.UserID {
-		return nil, models.ErrUnauthorized
+		http.Error(w, "Gallery is not found", http.StatusNotFound)
+		return models.ErrUnauthorized
 	}
-	return gallery, nil
+	return nil
 }

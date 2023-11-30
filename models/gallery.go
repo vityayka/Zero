@@ -3,6 +3,9 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"path/filepath"
+	"strings"
 )
 
 type Gallery struct {
@@ -12,7 +15,8 @@ type Gallery struct {
 }
 
 type GalleryService struct {
-	DB *sql.DB
+	DB        *sql.DB
+	ImagesDir string
 }
 
 func (service *GalleryService) Create(title string, userId int) (*Gallery, error) {
@@ -73,4 +77,40 @@ func (service *GalleryService) Update(gallery *Gallery) error {
 func (service *GalleryService) Delete(gallery *Gallery) error {
 	_, err := service.DB.Exec(`DELETE FROM galleries WHERE id = $1`, gallery.ID)
 	return err
+}
+
+func (service *GalleryService) Images(galleryID int) ([]Image, error) {
+	globPattern := filepath.Join(service.galleryDir(galleryID), "*")
+	files, err := filepath.Glob(globPattern)
+	if err != nil {
+		return nil, fmt.Errorf("filepath.Glob error: %v", err)
+	}
+	var images []Image
+	for _, file := range files {
+		if service.hasExtension(file, service.extensions()) {
+			images = append(images, Image{Path: file})
+		}
+	}
+	return images, nil
+}
+
+func (service *GalleryService) galleryDir(id int) string {
+	imagesDir := service.ImagesDir
+	if imagesDir == "" {
+		imagesDir = "images"
+	}
+	return filepath.Join(imagesDir, fmt.Sprintf("gallery-%d", id))
+}
+
+func (service *GalleryService) extensions() []string {
+	return []string{".jpg", ".png", ".jpeg", ".gif"}
+}
+
+func (service *GalleryService) hasExtension(path string, extensions []string) bool {
+	for _, ext := range extensions {
+		if strings.ToLower(filepath.Ext(path)) == strings.ToLower(ext) {
+			return true
+		}
+	}
+	return false
 }
