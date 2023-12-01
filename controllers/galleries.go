@@ -71,21 +71,32 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 		Title: gallery.Title,
 	}
 
-	images, err := g.Service.Images(gallery.ID)
+	outputImages, err := g.outputImages(gallery)
 	if err != nil {
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
+	data.Images = outputImages
+
+	g.Templates.Show.Execute(w, r, data)
+}
+
+func (g Galleries) outputImages(gallery *models.Gallery) ([]ImageOutput, error) {
+	images, err := g.Service.Images(gallery.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	var outputImages []ImageOutput
 	for _, image := range images {
-		data.Images = append(data.Images, ImageOutput{
+		outputImages = append(outputImages, ImageOutput{
 			Filename:        image.Filename,
 			FilenameEscaped: url.PathEscape(image.Filename),
 			GalleryID:       image.GalleryID,
 		})
 	}
-
-	g.Templates.Show.Execute(w, r, data)
+	return outputImages, nil
 }
 
 func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
@@ -129,12 +140,29 @@ func (g Galleries) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g Galleries) Edit(w http.ResponseWriter, r *http.Request) {
+	var data struct {
+		Gallery GalleryOutput
+		Images  []ImageOutput
+	}
 	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
 	if err != nil {
 		return
 	}
 
-	g.Templates.Edit.Execute(w, r, gallery)
+	data.Gallery = GalleryOutput{
+		ID:    gallery.ID,
+		Title: gallery.Title,
+	}
+
+	outputImages, err := g.outputImages(gallery)
+	if err != nil {
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	data.Images = outputImages
+
+	g.Templates.Edit.Execute(w, r, data)
 }
 
 func (g Galleries) Update(w http.ResponseWriter, r *http.Request) {
