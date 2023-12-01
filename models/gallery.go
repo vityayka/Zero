@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -80,21 +81,40 @@ func (service *GalleryService) Delete(gallery *Gallery) error {
 }
 
 func (service *GalleryService) Images(galleryID int) ([]Image, error) {
-	globPattern := filepath.Join(service.galleryDir(galleryID), "*")
+	globPattern := filepath.Join(service.GalleryDir(galleryID), "*")
 	files, err := filepath.Glob(globPattern)
 	if err != nil {
 		return nil, fmt.Errorf("filepath.Glob error: %v", err)
 	}
 	var images []Image
-	for _, file := range files {
-		if service.hasExtension(file, service.extensions()) {
-			images = append(images, Image{Path: file})
+	for _, path := range files {
+		if service.hasExtension(path, service.extensions()) {
+			images = append(images, Image{
+				Path:      path,
+				Filename:  filepath.Base(path),
+				GalleryID: galleryID,
+			})
 		}
 	}
 	return images, nil
 }
 
-func (service *GalleryService) galleryDir(id int) string {
+func (service *GalleryService) Image(galleryID int, filename string) (Image, error) {
+	imgPath := filepath.Join(service.GalleryDir(galleryID), filename)
+	fileInfo, err := os.Stat(imgPath)
+	if err != nil {
+		return Image{}, fmt.Errorf("searching an image: %v", err)
+	}
+
+	return Image{
+		Path:      imgPath,
+		Filename:  fileInfo.Name(),
+		Size:      fileInfo.Size(),
+		GalleryID: galleryID,
+	}, nil
+}
+
+func (service *GalleryService) GalleryDir(id int) string {
 	imagesDir := service.ImagesDir
 	if imagesDir == "" {
 		imagesDir = "images"

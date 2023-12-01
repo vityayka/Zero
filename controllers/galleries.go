@@ -2,8 +2,8 @@ package controllers
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -24,6 +24,12 @@ type Galleries struct {
 type GalleryOutput struct {
 	ID    int
 	Title string
+}
+
+type ImageOutput struct {
+	GalleryID       int
+	Filename        string
+	FilenameEscaped string
 }
 
 func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
@@ -52,9 +58,7 @@ func (g Galleries) Index(w http.ResponseWriter, r *http.Request) {
 func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 	var data struct {
 		Gallery GalleryOutput
-		Images  []struct {
-			URL string
-		}
+		Images  []ImageOutput
 	}
 
 	gallery, err := g.galleryById(r, w)
@@ -67,17 +71,38 @@ func (g Galleries) Show(w http.ResponseWriter, r *http.Request) {
 		Title: gallery.Title,
 	}
 
-	for i := 0; i < 10; i++ {
-		w, h := rand.Intn(500)+200, rand.Intn(500)+200
-		imgURL := fmt.Sprintf("https://placekitten.com/%d/%d", w, h)
-		var image struct {
-			URL string
-		}
-		image.URL = imgURL
-		data.Images = append(data.Images, image)
+	images, err := g.Service.Images(gallery.ID)
+	if err != nil {
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	for _, image := range images {
+		data.Images = append(data.Images, ImageOutput{
+			Filename:        image.Filename,
+			FilenameEscaped: url.PathEscape(image.Filename),
+			GalleryID:       image.GalleryID,
+		})
 	}
 
 	g.Templates.Show.Execute(w, r, data)
+}
+
+func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
+	galleryId, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, "Invalid gallery id", http.StatusBadRequest)
+		return
+	}
+
+	filename := chi.URLParam(r, "filename")
+
+	image, err := g.Service.Image(galleryId, filename)
+	if err != nil {
+		http.Error(w, "Image is not found", http.StatusNotFound)
+	}
+
+	http.ServeFile(w, r, image.Path)
 }
 
 func (g Galleries) New(w http.ResponseWriter, r *http.Request) {

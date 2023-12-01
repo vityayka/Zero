@@ -105,6 +105,7 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 	})
 	router.Route("/galleries", func(r chi.Router) {
 		r.Get("/{id:[0-9]+}", galleryC.Show)
+		r.Get("/{id:[0-9]+}/images/{filename}", galleryC.Image)
 		r.Group(func(r chi.Router) {
 			r.Use(userMiddleware.RequireUser)
 			r.Get("/new", galleryC.New)

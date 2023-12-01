@@ -5,7 +5,10 @@ import (
 )
 
 type Image struct {
-	Path string
+	Path      string
+	Filename  string
+	Size      int64
+	GalleryID int
 }
 
 type ImageService struct {
