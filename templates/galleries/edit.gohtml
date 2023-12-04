@@ -1,6 +1,6 @@
 {{template "header" .}}
 <div class="w-full p-8">
-    <h1>Create a new gallery</h1>
+    <h1>Edit gallery <b>{{.Gallery.Title}}</b></h1>
     <form action="/galleries/{{.Gallery.ID}}/edit" method="post">
         {{csrfField}}
         <div class="py-2">
@@ -25,6 +25,7 @@
             </button>
         </div>
     </form>
+    {{template "upload_image_form" .}}
     <div class="py-4">
         <h2 class="pb-4 text-sm font-semibold text-gray-800">Current Images</h2>
         <div class="py-2 grid grid-cols-8 gap-2">
@@ -39,7 +40,7 @@
         </div>
     </div>
     <!--Danger Actions-->
-    <form action="" onsubmit="return deleteResource('/galleries/{{.Gallery.ID}}/image/{{.FilenameEscaped}}')">
+    <form action="" onsubmit="return deleteResource('/galleries/{{.Gallery.ID}}')">
         {{csrfField}}
         <div class="py-4">
             <button class="py-4 px-2 bg-red-600 hover:bg-indigo-700 text-white rounded font-bold text-lg">
@@ -58,4 +59,22 @@
             Delete
         </button>
     </form>
+{{end}}
+
+{{define "upload_image_form"}}
+<form action="/galleries/{{.Gallery.ID}}/images" method="post" enctype="multipart/form-data">
+    {{csrfField}}
+    <div class="py-2">
+        <label for="images" class="block mb-2 text-sm font-semibold text-gray-800">
+            Add Images
+            <p class="p-2 text-xs text-gray-600 font-normal">
+                Please only upload jpg, png, and gif files.
+            </p>
+        </label>
+        <input type="file" multiple accept="image/png, image/jpeg, image/gif" id="images" name="images" />
+    </div>
+    <button type="submit" class="y-2 px-8 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded">
+        Upload
+    </button>
+</form>
 {{end}}

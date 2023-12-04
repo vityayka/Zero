@@ -2,8 +2,11 @@ package controllers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
@@ -114,6 +117,29 @@ func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, image.Path)
+
+}
+func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
+
+	filename := filepath.Base(chi.URLParam(r, "filename"))
+
+	image, err := g.Service.Image(gallery.ID, filename)
+	if err != nil {
+		http.Error(w, "Image is not found", http.StatusNotFound)
+		return
+	}
+
+	err = os.Remove(image.Path)
+	if err != nil {
+		log.Printf("image delete: %v", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+
+	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
 func (g Galleries) New(w http.ResponseWriter, r *http.Request) {
