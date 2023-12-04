@@ -73,4 +73,20 @@
 <h1>Footer</h1>
 </body>
 </html>
+
+<script>
+  let deleteResource = (url) => {
+    if (!confirm("Are you sure you wanna delete?")) {
+      return;
+    }
+
+    fetch(url, {
+      method: "DELETE",
+      headers: {
+        "X-CSRF-Token": {{csrfToken}}
+      },
+    })
+
+  }
+</script>
 {{end}}

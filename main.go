@@ -109,9 +109,10 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 		r.Group(func(r chi.Router) {
 			r.Use(userMiddleware.RequireUser)
 			r.Get("/new", galleryC.New)
+			r.Post("/", galleryC.Create)
 			r.Get("/{id:[0-9]+}/edit", galleryC.Edit)
 			r.Post("/{id:[0-9]+}/edit", galleryC.Update)
-			r.Post("/{id:[0-9]+}/delete", galleryC.Delete)
+			r.Delete("/{id:[0-9]+}", galleryC.Delete)
 			r.Get("/", galleryC.Index)
 		})
 	})

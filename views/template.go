@@ -34,6 +34,9 @@ func ParseFS(fs fs.FS, patterns ...string) (Template, error) {
 			"csrfField": func() (template.HTML, error) {
 				return "", fmt.Errorf("csrfField has never been implemented :(")
 			},
+			"csrfToken": func() string {
+				return ""
+			},
 			"currentUser": func() (template.HTML, error) {
 				return "", fmt.Errorf("currentUser has never been implemented :(")
 			},
@@ -67,6 +70,9 @@ func (t Template) Execute(w http.ResponseWriter, r *http.Request, data interface
 		template.FuncMap{
 			"csrfField": func() template.HTML {
 				return csrf.TemplateField(r)
+			},
+			"csrfToken": func() string {
+				return csrf.Token(r)
 			},
 			"currentUser": func() *models.User {
 				return context.User(r.Context())
