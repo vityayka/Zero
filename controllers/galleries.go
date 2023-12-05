@@ -21,7 +21,8 @@ type Galleries struct {
 		Edit  Template
 		Index Template
 	}
-	Service *models.GalleryService
+	Service      *models.GalleryService
+	ImageService *models.ImageService
 }
 
 type GalleryOutput struct {
@@ -117,8 +118,41 @@ func (g Galleries) Image(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, image.Path)
-
 }
+
+func (g Galleries) UploadImages(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
+	if err != nil {
+		return
+	}
+
+	err = r.ParseMultipartForm(5 << 20)
+	if err != nil {
+		log.Printf("uploading an image to a gallery: %v", err)
+		http.Error(w, "Uploading failed", http.StatusInternalServerError)
+		return
+	}
+
+	fileHeaders := r.MultipartForm.File["images"]
+
+	for _, fileHeader := range fileHeaders {
+		file, err := fileHeader.Open()
+		if err != nil {
+			http.Error(w, "Fail", http.StatusInternalServerError)
+			return
+		}
+		defer file.Close()
+
+		err = g.Service.CreateImage(fileHeader.Filename, gallery.ID, file)
+		if err != nil {
+			http.Error(w, "Uploading failed", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/galleries/%d", gallery.ID), http.StatusFound)
+}
+
 func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {
 	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
 

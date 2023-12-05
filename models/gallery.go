@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,7 +82,7 @@ func (service *GalleryService) Delete(gallery *Gallery) error {
 }
 
 func (service *GalleryService) Images(galleryID int) ([]Image, error) {
-	globPattern := filepath.Join(service.GalleryDir(galleryID), "*")
+	globPattern := filepath.Join(service.galleryDir(galleryID), "*")
 	files, err := filepath.Glob(globPattern)
 	if err != nil {
 		return nil, fmt.Errorf("filepath.Glob error: %v", err)
@@ -100,7 +101,7 @@ func (service *GalleryService) Images(galleryID int) ([]Image, error) {
 }
 
 func (service *GalleryService) Image(galleryID int, filename string) (Image, error) {
-	imgPath := filepath.Join(service.GalleryDir(galleryID), filename)
+	imgPath := filepath.Join(service.galleryDir(galleryID), filename)
 	fileInfo, err := os.Stat(imgPath)
 	if err != nil {
 		return Image{}, fmt.Errorf("searching an image: %v", err)
@@ -114,7 +115,30 @@ func (service *GalleryService) Image(galleryID int, filename string) (Image, err
 	}, nil
 }
 
-func (service *GalleryService) GalleryDir(id int) string {
+func (service *GalleryService) CreateImage(name string, galleryId int, file io.Reader) error {
+	dir := service.galleryDir(galleryId)
+	path := filepath.Join(dir, name)
+
+	err := os.MkdirAll(dir, 0755)
+	if err != nil {
+		return fmt.Errorf("creating a gallery image directory: %v", err)
+	}
+
+	dst, err := os.Create(path)
+	defer dst.Close()
+	if err != nil {
+		return fmt.Errorf("creating a file to write an image to: %v", err)
+	}
+
+	_, err = io.Copy(dst, file)
+	if err != nil {
+		return fmt.Errorf("copying file contents to a disk: %v", err)
+	}
+
+	return nil
+}
+
+func (service *GalleryService) galleryDir(id int) string {
 	imagesDir := service.ImagesDir
 	if imagesDir == "" {
 		imagesDir = "images"

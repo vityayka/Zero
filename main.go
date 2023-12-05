@@ -114,6 +114,7 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 			r.Post("/{id:[0-9]+}/edit", galleryC.Update)
 			r.Delete("/{id:[0-9]+}", galleryC.Delete)
 			r.Delete("/{id:[0-9]+}/images/{filename}", galleryC.DeleteImage)
+			r.Post("/{id:[0-9]+}/images", galleryC.UploadImages)
 			r.Get("/", galleryC.Index)
 		})
 	})
