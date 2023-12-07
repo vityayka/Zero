@@ -78,7 +78,14 @@ func (service *GalleryService) Update(gallery *Gallery) error {
 
 func (service *GalleryService) Delete(gallery *Gallery) error {
 	_, err := service.DB.Exec(`DELETE FROM galleries WHERE id = $1`, gallery.ID)
-	return err
+	if err != nil {
+		return fmt.Errorf("deleting from galleries: %v", err)
+	}
+	err = os.RemoveAll(service.galleryDir(gallery.ID))
+	if err != nil {
+		return fmt.Errorf("deleting gallery dir: %v", err)
+	}
+	return nil
 }
 
 func (service *GalleryService) Images(galleryID int) ([]Image, error) {
@@ -89,7 +96,7 @@ func (service *GalleryService) Images(galleryID int) ([]Image, error) {
 	}
 	var images []Image
 	for _, path := range files {
-		if service.hasExtension(path, service.extensions()) {
+		if hasExtension(path, service.extensions()) {
 			images = append(images, Image{
 				Path:      path,
 				Filename:  filepath.Base(path),
@@ -115,11 +122,19 @@ func (service *GalleryService) Image(galleryID int, filename string) (Image, err
 	}, nil
 }
 
-func (service *GalleryService) CreateImage(name string, galleryId int, file io.Reader) error {
+func (service *GalleryService) CreateImage(name string, galleryId int, file io.ReadSeeker) error {
+	err := checkContentType(file, service.imageContentTypes())
+	if err != nil {
+		return err
+	}
+	err = checkExtension(name, service.extensions())
+	if err != nil {
+		return err
+	}
 	dir := service.galleryDir(galleryId)
 	path := filepath.Join(dir, name)
 
-	err := os.MkdirAll(dir, 0755)
+	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return fmt.Errorf("creating a gallery image directory: %v", err)
 	}
@@ -150,7 +165,11 @@ func (service *GalleryService) extensions() []string {
 	return []string{".jpg", ".png", ".jpeg", ".gif"}
 }
 
-func (service *GalleryService) hasExtension(path string, extensions []string) bool {
+func (service *GalleryService) imageContentTypes() []string {
+	return []string{"image/jpg", "image/jpeg", "image/png", "image/gif"}
+}
+
+func hasExtension(path string, extensions []string) bool {
 	for _, ext := range extensions {
 		if strings.ToLower(filepath.Ext(path)) == strings.ToLower(ext) {
 			return true

@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -145,6 +146,13 @@ func (g Galleries) UploadImages(w http.ResponseWriter, r *http.Request) {
 
 		err = g.Service.CreateImage(fileHeader.Filename, gallery.ID, file)
 		if err != nil {
+			var fileError models.FileError
+			if errors.As(err, &fileError) {
+				msg := fmt.Sprintf("%s has an invalid content type or extension. Only jpeg, gif and png images "+
+					"are supported", fileHeader.Filename)
+				http.Error(w, msg, http.StatusBadRequest)
+				return
+			}
 			http.Error(w, "Uploading failed", http.StatusInternalServerError)
 			return
 		}

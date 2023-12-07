@@ -72,7 +72,7 @@ func (u Users) Create(w http.ResponseWriter, r *http.Request) {
 
 	u.createSession(w, user)
 
-	http.Redirect(w, r, "/users/me", http.StatusFound)
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 func (u Users) ForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -167,7 +167,7 @@ func (u Users) Auth(w http.ResponseWriter, r *http.Request) {
 
 	u.createSession(w, user)
 
-	http.Redirect(w, r, "/users/me", http.StatusFound)
+	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
 func (u Users) SignOut(w http.ResponseWriter, r *http.Request) {
