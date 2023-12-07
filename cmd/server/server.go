@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/lpernett/godotenv"
 	"github.com/vityayka/go-zero/controllers"
@@ -36,7 +35,7 @@ func loadEnvConfig() (config, error) {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf(".env load failed: %v", err)
-		panic(err)
+		return cfg, err
 	}
 
 	cfg.SMTP.Host = os.Getenv("SMTP_HOST")
@@ -64,13 +63,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db := setupDB(cfg.Postgres)
+	err = run(cfg)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func run(cfg config) error {
+	db, err := setupDB(cfg.Postgres)
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 
 	router := setupRoutes(db, cfg)
 
 	fmt.Printf("Starting the server on %s...", cfg.Server.Address)
-	http.ListenAndServe(cfg.Server.Address, router)
+	return http.ListenAndServe(cfg.Server.Address, router)
 }
 
 func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
@@ -119,11 +128,9 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 		})
 	})
 
-	router.Route("/photos", func(r chi.Router) {
-		r.Use(middleware.Logger)
-		r.Get("/{photoSlug:[a-zA-z-0-9]+}",
-			controllers.Photos(views.Must(views.ParseFS(templates.FS, "photos.gohtml", "tailwind.gohtml"))))
-	})
+	assetsHandler := http.FileServer(http.Dir("./assets"))
+	router.Get("/assets/*", http.StripPrefix("/assets", assetsHandler).ServeHTTP)
+
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "PAGE NOT FOUND", http.StatusNotFound)
 	})
@@ -150,15 +157,15 @@ func initControllers(usersC *controllers.Users, galleryC *controllers.Galleries,
 	galleryC.Templates.Index = views.Must(views.ParseFS(templates.FS, "galleries/index.gohtml", "tailwind.gohtml"))
 }
 
-func setupDB(cfg models.PostgresConfig) *sql.DB {
+func setupDB(cfg models.PostgresConfig) (*sql.DB, error) {
 	db, err := models.Open(cfg)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	err = models.MigrateFS(db, migrations.FS, ".")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return db
+	return db, nil
 }

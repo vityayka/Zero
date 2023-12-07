@@ -1,5 +1,5 @@
-go-zero.exe
-
 .env
 
 images/
+/node_modules/
+/assets/

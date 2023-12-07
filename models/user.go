@@ -83,8 +83,8 @@ func (us *UserService) Find(email string) (*User, error) {
 	row := us.DB.QueryRow("SELECT id, pw_hash FROM users where email = $1;", email)
 	err := row.Scan(&user.ID, &user.PwHash)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("User not found")
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("user not found")
 	}
 
 	if err != nil {
