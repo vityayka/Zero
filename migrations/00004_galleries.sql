@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS galleries (
 );
 -- +goose StatementEnd
 
--- +goose Downz
+-- +goose Down
 -- +goose StatementBegin
 DROP TABLE galleries;
 -- +goose StatementEnd
