@@ -7,7 +7,7 @@ services:
        dockerfile: Dockerfile
      restart: always
      volumes:
-       - ~/data/go-zero.pp.ua/images :/app/images
+       - ~/data/go-zero.pp.ua/images:/app/images
      depends_on:
        - db
   
@@ -15,8 +15,8 @@ services:
     image: caddy
     restart: always
     ports:
-     - 80:80
-     - 443:443
+     - "80:80"
+     - "443:443"
     volumes:
      - ./Caddyfile:/etc/caddy/Caddyfile
 
