@@ -1,5 +1,14 @@
 version: "3.9"
 
+x-logging:
+  &highlight-logging
+  driver: fluentd
+  options:
+    fluentd-address: "otel.highlight.io:${LOGGING_HIGHLIGHT_PORT}"
+    fluentd-async: "true"
+    fluentd-sub-second-precision: "true"
+    tag: "highlight.project_id=${LOGGING_HIGHLIGHT_PROJECT_ID}"
+
 services:
   server:
      build:
@@ -10,6 +19,7 @@ services:
        - ~/data/go-zero.pp.ua/images:/app/images
      depends_on:
        - db
+     logging: *highlight-logging
   
   caddy:
     image: caddy
@@ -19,6 +29,7 @@ services:
      - "443:443"
     volumes:
      - ./Caddyfile:/etc/caddy/Caddyfile
+    logging: *highlight-logging
 
   db:
     environment:
@@ -28,3 +39,4 @@ services:
       POSTGRES_DB: ${POSTGRES_DATABASE}
     volumes:
       - ~/data/go-zero.pp.ua/psql:/var/lib/postgresql/data/pgdata
+    logging: *highlight-logging
