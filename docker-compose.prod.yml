@@ -7,7 +7,7 @@ services:
        dockerfile: Dockerfile
      restart: always
      volumes:
-       - ./images:/app/images
+       - ~/data/go-zero.pp.ua/images :/app/images
      depends_on:
        - db
   
@@ -19,3 +19,12 @@ services:
      - 443:443
     volumes:
      - ./Caddyfile:/etc/caddy/Caddyfile
+
+  db:
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+    volumes:
+      - ~/data/go-zero.pp.ua/psql:/var/lib/postgresql/data/pgdata
