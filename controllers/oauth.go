@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/go-chi/chi/v5"
 	"github.com/gorilla/csrf"
 	"golang.org/x/oauth2"
@@ -29,7 +30,7 @@ func (oa OAuth) Connect(w http.ResponseWriter, r *http.Request) {
 	// for the scopes specified above.
 	url := cfg.AuthCodeURL(
 		state,
-		oauth2.SetAuthURLParam("redirect_uri", "http://localhost:3000/oauth/dropbox/callback"),
+		oauth2.SetAuthURLParam("redirect_uri", redirectURI(r, provider)),
 	)
 
 	http.Redirect(w, r, url, http.StatusFound)
@@ -57,4 +58,15 @@ func (oa OAuth) Callback(w http.ResponseWriter, r *http.Request) {
 	)
 
 	http.Redirect(w, r, url, http.StatusFound)
+}
+
+func redirectURI(r *http.Request, provider string) string {
+	var scheme string
+	if strings.Contains(r.Host, "localhost") {
+		scheme = "http"
+	} else {
+		scheme = "https"
+	}
+
+	return fmt.Sprintf("%s://%s/oauth/%s/callback", scheme, r.Host, provider)
 }

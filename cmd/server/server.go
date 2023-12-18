@@ -65,6 +65,7 @@ func loadEnvConfig() (config, error) {
 	cfg.Postgres.User = os.Getenv("POSTGRES_USER")
 	cfg.Postgres.Password = os.Getenv("POSTGRES_PASSWORD")
 	cfg.Postgres.Sslmode = os.Getenv("POSTGRES_SSLMODE")
+	cfg.OAuthProviders = make(map[string]OAuthProvider)
 
 	cfg.OAuthProviders["dropbox"] = OAuthProvider{
 		AppId:    os.Getenv("DROPBOX_APP_KEY"),
