@@ -22,8 +22,7 @@ type Galleries struct {
 		Edit  Template
 		Index Template
 	}
-	Service      *models.GalleryService
-	ImageService *models.ImageService
+	Service *models.GalleryService
 }
 
 type GalleryOutput struct {

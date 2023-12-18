@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -87,7 +88,7 @@ func (service *PasswordResetService) User(token string) (*User, error) {
 
 	err := res.Scan(&user.ID, &user.Email, &user.PwHash)
 
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("provided reset token is expired or a fake")
 	}
 

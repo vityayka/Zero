@@ -119,6 +119,7 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 	galleryC := &controllers.Galleries{}
 	initControllers(usersC, galleryC, db, cfg)
 	oauthC := &controllers.OAuth{
+		TokenService: models.OAuthService{DB: db},
 		ProviderConfigs: map[string]*oauth2.Config{
 			"dropbox": {
 				ClientID:     cfg.OAuthProviders["dropbox"].AppId,

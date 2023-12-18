@@ -16,6 +16,13 @@ type Gallery struct {
 	Title  string
 }
 
+type Image struct {
+	Path      string
+	Filename  string
+	Size      int64
+	GalleryID int
+}
+
 type GalleryService struct {
 	DB        *sql.DB
 	ImagesDir string
