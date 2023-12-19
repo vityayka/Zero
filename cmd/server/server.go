@@ -3,10 +3,12 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"golang.org/x/oauth2"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -26,7 +28,16 @@ type config struct {
 	Server struct {
 		Address string
 	}
-	Postgres models.PostgresConfig
+	Postgres       models.PostgresConfig
+	OAuthProviders map[string]OAuthProvider
+}
+
+type OAuthProvider struct {
+	AppId    string
+	Secret   string
+	AuthUrl  string
+	TokenUrl string
+	Scopes   []string
 }
 
 func loadEnvConfig() (config, error) {
@@ -54,6 +65,15 @@ func loadEnvConfig() (config, error) {
 	cfg.Postgres.User = os.Getenv("POSTGRES_USER")
 	cfg.Postgres.Password = os.Getenv("POSTGRES_PASSWORD")
 	cfg.Postgres.Sslmode = os.Getenv("POSTGRES_SSLMODE")
+	cfg.OAuthProviders = make(map[string]OAuthProvider)
+
+	cfg.OAuthProviders["dropbox"] = OAuthProvider{
+		AppId:    os.Getenv("DROPBOX_APP_KEY"),
+		Secret:   os.Getenv("DROPBOX_APP_SECRET"),
+		AuthUrl:  os.Getenv("DROPBOX_AUTH_URL"),
+		TokenUrl: os.Getenv("DROPBOX_TOKEN_URL"),
+		Scopes:   strings.Split(os.Getenv("DROPBOX_SCOPES"), ","),
+	}
 
 	return cfg, err
 }
@@ -98,6 +118,20 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 	usersC := &controllers.Users{}
 	galleryC := &controllers.Galleries{}
 	initControllers(usersC, galleryC, db, cfg)
+	oauthC := &controllers.OAuth{
+		TokenService: models.OAuthService{DB: db},
+		ProviderConfigs: map[string]*oauth2.Config{
+			"dropbox": {
+				ClientID:     cfg.OAuthProviders["dropbox"].AppId,
+				ClientSecret: cfg.OAuthProviders["dropbox"].Secret,
+				Scopes:       cfg.OAuthProviders["dropbox"].Scopes,
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  cfg.OAuthProviders["dropbox"].AuthUrl,
+					TokenURL: cfg.OAuthProviders["dropbox"].TokenUrl,
+				},
+			},
+		},
+	}
 
 	router.Get("/users/signup", usersC.New)
 	router.Get("/users/signin", usersC.Signin)
@@ -124,8 +158,15 @@ func setupRoutes(db *sql.DB, cfg config) *chi.Mux {
 			r.Delete("/{id:[0-9]+}", galleryC.Delete)
 			r.Delete("/{id:[0-9]+}/images/{filename}", galleryC.DeleteImage)
 			r.Post("/{id:[0-9]+}/images", galleryC.UploadImages)
+			r.Post("/{id:[0-9]+}/images-urls", galleryC.UploadExternalImages)
 			r.Get("/", galleryC.Index)
 		})
+	})
+
+	router.Route("/oauth", func(r chi.Router) {
+		r.Use(userMiddleware.RequireUser)
+		r.Get("/{provider:[a-z0-9]+}/connect", oauthC.Connect)
+		r.Get("/{provider:[a-z0-9]+}/callback", oauthC.Callback)
 	})
 
 	assetsHandler := http.FileServer(http.Dir("./assets"))

@@ -26,6 +26,7 @@
         </div>
     </form>
     {{template "upload_image_form" .}}
+    {{template "dropbox_chooser" .}}
     <div class="py-4">
         <h2 class="pb-4 text-sm font-semibold text-gray-800">Current Images</h2>
         <div class="py-2 grid grid-cols-8 gap-2">
@@ -77,4 +78,37 @@
         Upload
     </button>
 </form>
+{{end}}
+
+{{define "dropbox_chooser"}}
+    <div class="py-4">
+        <div id="chooser_container"></div>
+    </div>
+    <script
+            type="text/javascript" src="https://www.dropbox.com/static/api/2/dropins.js"
+            id="dropboxjs" data-app-key="wzi9exz7145ww0i">
+    </script>
+    <script type="text/javascript">
+        options = {
+            success: function(files) {
+                fetch("/galleries/" + {{.Gallery.ID}} + "/images-urls", {
+                    method: "POST",
+                    headers: {
+                        "content-type": "application/json",
+                        "X-CSRF-Token": {{csrfToken}}
+                    },
+                    body: JSON.stringify({
+                        "links": files.map(data => data.link)
+                    })
+                }).then(() => location.reload())
+            },
+            multiselect: true,
+            linkType: "direct",
+            extensions: ['images'],
+            sizeLimit: 1024 * 1000,
+        };
+
+        var button = Dropbox.createChooseButton(options);
+        document.getElementById("chooser_container").appendChild(button);
+    </script>
 {{end}}

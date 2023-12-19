@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -22,8 +23,7 @@ type Galleries struct {
 		Edit  Template
 		Index Template
 	}
-	Service      *models.GalleryService
-	ImageService *models.ImageService
+	Service *models.GalleryService
 }
 
 type GalleryOutput struct {
@@ -159,6 +159,34 @@ func (g Galleries) UploadImages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/galleries/%d", gallery.ID), http.StatusFound)
+}
+
+func (g Galleries) UploadExternalImages(w http.ResponseWriter, r *http.Request) {
+	gallery, err := g.galleryById(r, w, galleryBelongsToUser)
+	if err != nil {
+		http.Error(w, "Fail", http.StatusInternalServerError)
+		return
+	}
+
+	var links struct {
+		Links []string `json:"links"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&links)
+	if err != nil {
+		http.Error(w, "Fail", http.StatusInternalServerError)
+		return
+	}
+
+	for _, imageUrl := range links.Links {
+		err = g.Service.CreateImageFromUrl(gallery.ID, imageUrl)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Faied to upload an external image %s", imageUrl), http.StatusInternalServerError)
+			return
+		}
+	}
+	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
+	http.Redirect(w, r, editPath, http.StatusFound)
 }
 
 func (g Galleries) DeleteImage(w http.ResponseWriter, r *http.Request) {

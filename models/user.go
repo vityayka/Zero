@@ -68,7 +68,7 @@ func (us *UserService) Auth(email, password string) (*User, error) {
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PwHash), []byte(password))
 
-	if err == bcrypt.ErrMismatchedHashAndPassword {
+	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 		return nil, fmt.Errorf("password is incorrect")
 	}
 
