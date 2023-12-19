@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	ErrEmailExists  error = errors.New("models: users with such email already exists")
-	ErrNotFound     error = errors.New("models: couldn't find an entity")
-	ErrUnauthorized error = errors.New("models: insufficient level of access")
+	ErrEmailExists  = errors.New("models: users with such email already exists")
+	ErrNotFound     = errors.New("models: couldn't find an entity")
+	ErrUnauthorized = errors.New("models: insufficient level of access")
 )
 
 type FileError struct {
@@ -22,17 +22,11 @@ func (err FileError) Error() string {
 	return fmt.Sprintf("file error: %v", err.Issue)
 }
 
-func checkContentType(content io.ReadSeeker, allowedContentTypes []string) error {
+func checkContentType(content io.Reader, allowedContentTypes []string) ([]byte, error) {
 	testBytes := make([]byte, 512)
-	_, err := content.Read(testBytes)
+	n, err := content.Read(testBytes)
 	if err != nil {
-		return FileError{
-			Issue: fmt.Sprintf("checking content type: %v", err),
-		}
-	}
-	_, err = content.Seek(0, 0)
-	if err != nil {
-		return FileError{
+		return testBytes, FileError{
 			Issue: fmt.Sprintf("checking content type: %v", err),
 		}
 	}
@@ -40,11 +34,11 @@ func checkContentType(content io.ReadSeeker, allowedContentTypes []string) error
 	contentType := http.DetectContentType(testBytes)
 	for _, allowedContentType := range allowedContentTypes {
 		if contentType == allowedContentType {
-			return nil
+			return testBytes[:n], nil
 		}
 	}
 
-	return FileError{
+	return testBytes, FileError{
 		Issue: fmt.Sprintf("invalid content type %s", contentType),
 	}
 }

@@ -1,11 +1,14 @@
 package models
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -129,8 +132,8 @@ func (service *GalleryService) Image(galleryID int, filename string) (Image, err
 	}, nil
 }
 
-func (service *GalleryService) CreateImage(name string, galleryId int, file io.ReadSeeker) error {
-	err := checkContentType(file, service.imageContentTypes())
+func (service *GalleryService) CreateImage(name string, galleryId int, file io.Reader) error {
+	contentTypeSliceOfFile, err := checkContentType(file, service.imageContentTypes())
 	if err != nil {
 		return err
 	}
@@ -139,25 +142,42 @@ func (service *GalleryService) CreateImage(name string, galleryId int, file io.R
 		return err
 	}
 	dir := service.galleryDir(galleryId)
-	path := filepath.Join(dir, name)
+	imagePath := filepath.Join(dir, name)
 
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return fmt.Errorf("creating a gallery image directory: %v", err)
 	}
 
-	dst, err := os.Create(path)
+	dst, err := os.Create(imagePath)
 	defer dst.Close()
 	if err != nil {
 		return fmt.Errorf("creating a file to write an image to: %v", err)
 	}
 
-	_, err = io.Copy(dst, file)
+	completeFile := io.MultiReader(bytes.NewReader(contentTypeSliceOfFile), file)
+	_, err = io.Copy(dst, completeFile)
 	if err != nil {
 		return fmt.Errorf("copying file contents to a disk: %v", err)
 	}
 
 	return nil
+}
+
+func (service *GalleryService) CreateImageFromUrl(galleryId int, url string) error {
+	filename := path.Base(url)
+	response, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("file downloading error: %v", err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed downloading a file: status code %d", response.StatusCode)
+	}
+
+	defer response.Body.Close()
+
+	return service.CreateImage(filename, galleryId, response.Body)
 }
 
 func (service *GalleryService) galleryDir(id int) string {
