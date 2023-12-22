@@ -4,16 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/go-chi/chi/v5"
+	"github.com/vityayka/go-zero/context"
+	"github.com/vityayka/go-zero/models"
+	"golang.org/x/sync/errgroup"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/vityayka/go-zero/context"
-	"github.com/vityayka/go-zero/models"
 )
 
 type Galleries struct {
@@ -178,13 +178,21 @@ func (g Galleries) UploadExternalImages(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	var eg errgroup.Group
+
 	for _, imageUrl := range links.Links {
-		err = g.Service.CreateImageFromUrl(gallery.ID, imageUrl)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Faied to upload an external image %s", imageUrl), http.StatusInternalServerError)
-			return
-		}
+		insideLoopUrl := imageUrl
+		fmt.Println(insideLoopUrl)
+		eg.Go(func() error {
+			return g.Service.CreateImageFromUrl(gallery.ID, insideLoopUrl)
+		})
 	}
+	err = eg.Wait()
+	if err != nil {
+		http.Error(w, "Unable to upload some of images", http.StatusInternalServerError)
+		return
+	}
+
 	editPath := fmt.Sprintf("/galleries/%d/edit", gallery.ID)
 	http.Redirect(w, r, editPath, http.StatusFound)
 }
